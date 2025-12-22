@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>R-Ricochet: Target Strike</title>
+    <style>
+        :root { --bg: #2c3e50; --ball: #f1c40f; --target: #e74c3c; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial Rounded MT Bold', sans-serif; }
+        body { background: var(--bg); overflow: hidden; touch-action: none; color: white; }
+        
+        canvas { display: block; background: #34495e; margin: 0 auto; border: 5px solid #bdc3c7; }
+        #ui { position: absolute; top: 10px; left: 10px; font-size: 20px; pointer-events: none; }
+        #msg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .btn { background: var(--ball); border: none; padding: 10px 30px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="ui">Nishonlar: <span id="count">0</span></div>
+
+<div id="msg">
+    <h1 id="title">AJOYIB! 🎯</h1>
+    <button class="btn" onclick="location.reload()">QAYTA O'YNASH</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const countEl = document.getElementById('count');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let ball = { x: canvas.width/2, y: canvas.height - 50, dx: 4, dy: -4, radius: 10 };
+    let targets = [];
+    let gameActive = true;
+
+    // Nishonlarni yaratish
+    for(let i=0; i<3; i++) {
+        for(let j=0; j<5; j++) {
+            targets.push({ x: j * (canvas.width/5) + 20, y: i * 50 + 50, w: 50, h: 20, active: true });
+        }
+    }
+
+    function drawBall() {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+        ctx.fillStyle = "#f1c40f";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawTargets() {
+        let activeCount = 0;
+        targets.forEach(t => {
+            if(t.active) {
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(t.x, t.y, t.w, t.h);
+                activeCount++;
+            }
+        });
+        countEl.innerText = activeCount;
+        if(activeCount === 0) win();
+    }
+
+    function update() {
+        if(!gameActive) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        drawBall();
+        drawTargets();
+
+        // Devorga urilish (Rikoshet)
+        if(ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) ball.dx = -ball.dx;
+        if(ball.y + ball.dy < ball.radius) ball.dy = -ball.dy;
+        
+        // Pastga tushib ketsa
+        if(ball.y + ball.dy > canvas.height - ball.radius) {
+            gameOver();
+        }
+
+        // Nishonga urilish
+        targets.forEach(t => {
+            if(t.active && ball.x > t.x && ball.x < t.x + t.w && ball.y > t.y && ball.y < t.y + t.h) {
+                ball.dy = -ball.dy;
+                t.active = false;
+            }
+        });
+
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+        requestAnimationFrame(update);
+    }
+
+    function win() {
+        gameActive = false;
+        document.getElementById('msg').style.display = 'flex';
+    }
+
+    function gameOver() {
+        gameActive = false;
+        document.getElementById('title').innerText = "YUTQAZDINGIZ! 💥";
+        document.getElementById('msg').style.display = 'flex';
+    }
+
+    // Platformani boshqarish (to'pni qaytarish uchun)
+    window.addEventListener('touchmove', (e) => {
+        let touchX = e.touches[0].clientX;
+        // Bu yerga raketka boshqaruvini qo'shish mumkin
+    });
+
+    update();
+</script>
+</body>
+</html>
