@@ -1,27 +1,32 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>R-Ricochet: Target Strike</title>
+    <title>R-Neon: Orbit Breaker</title>
     <style>
-        :root { --bg: #2c3e50; --ball: #f1c40f; --target: #e74c3c; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial Rounded MT Bold', sans-serif; }
-        body { background: var(--bg); overflow: hidden; touch-action: none; color: white; }
-        
-        canvas { display: block; background: #34495e; margin: 0 auto; border: 5px solid #bdc3c7; }
-        #ui { position: absolute; top: 10px; left: 10px; font-size: 20px; pointer-events: none; }
-        #msg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .btn { background: var(--ball); border: none; padding: 10px 30px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        :root { --neon: #00f3ff; --pink: #ff00ff; --bg: #050508; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: white; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        canvas { display: block; cursor: none; }
+
+        #hud { position: fixed; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
+        .stat { background: rgba(0, 243, 255, 0.1); padding: 8px 15px; border: 1px solid var(--neon); border-radius: 5px; color: var(--neon); text-shadow: 0 0 5px var(--neon); }
+
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; text-align: center; }
+        button { padding: 15px 45px; font-size: 18px; background: var(--pink); border: none; color: white; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 20px; box-shadow: 0 0 15px var(--pink); }
     </style>
 </head>
 <body>
 
-<div id="ui">Nishonlar: <span id="count">0</span></div>
+<div id="hud">
+    <div class="stat">SCORE: <span id="score">0</span></div>
+    <div class="stat">RC: <span id="rc">0</span></div>
+</div>
 
-<div id="msg">
-    <h1 id="title">AJOYIB! 🎯</h1>
-    <button class="btn" onclick="location.reload()">QAYTA O'YNASH</button>
+<div id="start-screen" class="overlay">
+    <h1 style="color: var(--neon); font-size: 40px; margin: 0;">ORBIT BREAKER</h1>
+    <p>Move the paddle to bounce the ball.<br>Break all neon data-blocks!</p>
+    <button onclick="initGame()">LAUNCH BALL</button>
 </div>
 
 <canvas id="gameCanvas"></canvas>
@@ -29,90 +34,123 @@
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const countEl = document.getElementById('count');
+    let gameActive = false, score = 0, rc = 0;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const ball = { x: 0, y: 0, dx: 4, dy: -4, radius: 8 };
+    const paddle = { h: 12, w: 100, x: 0 };
+    let bricks = [];
+    const brickRows = 5, brickCols = 8, brickPadding = 10, brickOffsetTop = 60;
 
-    let ball = { x: canvas.width/2, y: canvas.height - 50, dx: 4, dy: -4, radius: 10 };
-    let targets = [];
-    let gameActive = true;
-
-    // Nishonlarni yaratish
-    for(let i=0; i<3; i++) {
-        for(let j=0; j<5; j++) {
-            targets.push({ x: j * (canvas.width/5) + 20, y: i * 50 + 50, w: 50, h: 20, active: true });
-        }
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(f, dur) {
+        if(!gameActive) return;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.frequency.value = f;
+        osc.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
     }
 
-    function drawBall() {
+    function initGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        ball.x = canvas.width / 2;
+        ball.y = canvas.height - 50;
+        paddle.x = (canvas.width - paddle.w) / 2;
+        
+        const brickWidth = (canvas.width - (brickPadding * (brickCols + 1))) / brickCols;
+        for(let c=0; c<brickCols; c++) {
+            bricks[c] = [];
+            for(let r=0; r<brickRows; r++) {
+                bricks[c][r] = { x: 0, y: 0, status: 1 };
+            }
+        }
+        
+        gameActive = true;
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        draw();
+    }
+
+    window.onpointermove = (e) => {
+        paddle.x = e.clientX - paddle.w / 2;
+        if(paddle.x < 0) paddle.x = 0;
+        if(paddle.x + paddle.w > canvas.width) paddle.x = canvas.width - paddle.w;
+    };
+
+    function draw() {
+        if(!gameActive) return;
+        ctx.fillStyle = 'rgba(5, 5, 8, 0.3)'; // Trail effect
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Bricks
+        const brickWidth = (canvas.width - (brickPadding * (brickCols + 1))) / brickCols;
+        for(let c=0; c<brickCols; c++) {
+            for(let r=0; r<brickRows; r++) {
+                if(bricks[c][r].status === 1) {
+                    let bX = (c * (brickWidth + brickPadding)) + brickPadding;
+                    let bY = (r * (30 + brickPadding)) + brickOffsetTop;
+                    bricks[c][r].x = bX;
+                    bricks[c][r].y = bY;
+                    ctx.fillStyle = r % 2 === 0 ? '#00f3ff' : '#ff00ff';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = ctx.fillStyle;
+                    ctx.fillRect(bX, bY, brickWidth, 25);
+                    ctx.shadowBlur = 0;
+
+                    // Collision detection
+                    if(ball.x > bX && ball.x < bX + brickWidth && ball.y > bY && ball.y < bY + 25) {
+                        ball.dy = -ball.dy;
+                        bricks[c][r].status = 0;
+                        score += 10;
+                        rc += 2;
+                        document.getElementById('score').innerText = score;
+                        document.getElementById('rc').innerText = rc;
+                        playTone(400 + (r * 50), 0.1);
+                    }
+                }
+            }
+        }
+
+        // Ball
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-        ctx.fillStyle = "#f1c40f";
+        ctx.fillStyle = "white";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#00f3ff";
         ctx.fill();
         ctx.closePath();
-    }
 
-    function drawTargets() {
-        let activeCount = 0;
-        targets.forEach(t => {
-            if(t.active) {
-                ctx.fillStyle = "#e74c3c";
-                ctx.fillRect(t.x, t.y, t.w, t.h);
-                activeCount++;
-            }
-        });
-        countEl.innerText = activeCount;
-        if(activeCount === 0) win();
-    }
+        // Paddle
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillRect(paddle.x, canvas.height - 30, paddle.w, paddle.h);
 
-    function update() {
-        if(!gameActive) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        drawBall();
-        drawTargets();
-
-        // Devorga urilish (Rikoshet)
-        if(ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) ball.dx = -ball.dx;
-        if(ball.y + ball.dy < ball.radius) ball.dy = -ball.dy;
-        
-        // Pastga tushib ketsa
-        if(ball.y + ball.dy > canvas.height - ball.radius) {
-            gameOver();
-        }
-
-        // Nishonga urilish
-        targets.forEach(t => {
-            if(t.active && ball.x > t.x && ball.x < t.x + t.w && ball.y > t.y && ball.y < t.y + t.h) {
-                ball.dy = -ball.dy;
-                t.active = false;
-            }
-        });
-
+        // Movement
         ball.x += ball.dx;
         ball.y += ball.dy;
-        requestAnimationFrame(update);
-    }
 
-    function win() {
-        gameActive = false;
-        document.getElementById('msg').style.display = 'flex';
+        if(ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) ball.dx = -ball.dx;
+        if(ball.y + ball.dy < ball.radius) ball.dy = -ball.dy;
+        else if(ball.y + ball.dy > canvas.height - 30) {
+            if(ball.x > paddle.x && ball.x < paddle.x + paddle.w) {
+                ball.dy = -ball.dy;
+                playTone(200, 0.1);
+            } else {
+                gameOver();
+            }
+        }
+
+        requestAnimationFrame(draw);
     }
 
     function gameOver() {
         gameActive = false;
-        document.getElementById('title').innerText = "YUTQAZDINGIZ! 💥";
-        document.getElementById('msg').style.display = 'flex';
+        alert("ORBIT LOST! Data blocks remaining. RC: " + rc);
+        location.reload();
     }
-
-    // Platformani boshqarish (to'pni qaytarish uchun)
-    window.addEventListener('touchmove', (e) => {
-        let touchX = e.touches[0].clientX;
-        // Bu yerga raketka boshqaruvini qo'shish mumkin
-    });
-
-    update();
 </script>
 </body>
 </html>
