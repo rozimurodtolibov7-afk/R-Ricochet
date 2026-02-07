@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎴 Xotira O'yini</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #f5576c;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #f5576c;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 5px;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .difficulty-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .difficulty-btn {
+            background: white;
+            color: #f5576c;
+            border: 2px solid #f5576c;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-color: #f5576c;
+        }
+
+        .memory-grid {
+            display: grid;
+            gap: 15px;
+            margin: 30px 0;
+            justify-content: center;
+        }
+
+        .grid-easy {
+            grid-template-columns: repeat(4, 100px);
+        }
+
+        .grid-medium {
+            grid-template-columns: repeat(4, 90px);
+        }
+
+        .grid-hard {
+            grid-template-columns: repeat(6, 80px);
+        }
+
+        .memory-card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            transition: transform 0.3s;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .memory-card::before {
+            content: '?';
+            position: absolute;
+            color: white;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .memory-card:hover:not(.flipped):not(.matched) {
+            transform: scale(1.05);
+        }
+
+        .memory-card.flipped {
+            background: white;
+            border: 3px solid #f5576c;
+        }
+
+        .memory-card.flipped::before {
+            display: none;
+        }
+
+        .memory-card.matched {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            cursor: default;
+            animation: matchPulse 0.5s ease-in-out;
+        }
+
+        .memory-card.matched::before {
+            display: none;
+        }
+
+        @keyframes matchPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .game-over {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .game-over.show {
+            display: block;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-over h2 {
+            color: #f5576c;
+            margin-bottom: 15px;
+            font-size: 2em;
+        }
+
+        .game-over p {
+            font-size: 1.2em;
+            color: #666;
+            margin: 10px 0;
+        }
+
+        .timer {
+            text-align: center;
+            font-size: 1.5em;
+            color: #f5576c;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .moves-counter {
+            text-align: center;
+            font-size: 1.2em;
+            color: #666;
+            margin: 10px 0;
+        }
+
+        .instructions {
+            text-align: center;
+            background: #fff3f3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        .star-rating {
+            text-align: center;
+            font-size: 2em;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎴 Xotira O'yini</h1>
+        <p class="subtitle">Juftlarni toping va xotirangizni kuchaytiring!</p>
+
+        <div class="instructions">
+            💡 Kartochkalarni bosing va bir xil rasmlarni toping. Kamroq harakatda tugatsangiz, ko'proq ball olasiz!
+        </div>
+
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" onclick="setDifficulty('easy')">Oson (4x4)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('medium')">O'rta (4x4)</button>
+            <button class="difficulty-btn" onclick="setDifficulty('hard')">Qiyin (6x6)</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="score">0</div>
+                <div class="stat-label">Ball</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="matches">0</div>
+                <div class="stat-label">Juftlar</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="bestTime">--</div>
+                <div class="stat-label">Eng Yaxshi Vaqt</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="initGame()">🔄 Yangi O'yin</button>
+            <button class="btn" onclick="toggleMusic()" id="musicBtn">🔊 Musiqa</button>
+        </div>
+
+        <div class="timer">⏱ Vaqt: <span id="timer">0</span>s</div>
+        <div class="moves-counter">🎯 Harakatlar: <span id="moves">0</span></div>
+
+        <div class="memory-grid grid-easy" id="memoryGrid"></div>
+
+        <div class="game-over" id="gameOver">
+            <h2>🎉 Tabriklaymiz!</h2>
+            <div class="star-rating" id="stars"></div>
+            <p>Vaqt: <span id="finalTime"></span> soniya</p>
+            <p>Harakatlar: <span id="finalMoves"></span></p>
+            <p>Ball: <span id="finalScore"></span></p>
+            <button class="btn" onclick="initGame()">Yana O'ynash</button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Context for sound effects
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let isMusicPlaying = false;
+
+        // Sound effects functions
+        function playFlipSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playMatchSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'triangle';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            
+            oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+            oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function playWrongSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.value = 200;
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        function playWinSound() {
+            const notes = [523, 659, 784, 1047];
+            notes.forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+                
+                const startTime = audioContext.currentTime + (index * 0.15);
+                gainNode.gain.setValueAtTime(0.3, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + 0.3);
+            });
+        }
+
+        function playBackgroundMusic() {
+            if (isMusicPlaying) return;
+            isMusicPlaying = true;
+            
+            const melody = [523, 587, 659, 784, 659, 587, 523, 0];
+            let noteIndex = 0;
+            
+            function playNote() {
+                if (!isMusicPlaying) return;
+                
+                const freq = melody[noteIndex];
+                if (freq > 0) {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    
+                    gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.4);
+                }
+                
+                noteIndex = (noteIndex + 1) % melody.length;
+                setTimeout(playNote, 500);
+            }
+            
+            playNote();
+        }
+
+        function stopBackgroundMusic() {
+            isMusicPlaying = false;
+        }
+
+        let difficulty = 'easy';
+        let symbols = {
+            easy: ['🍎', '🍌', '🍇', '🍊', '🍓', '🍒', '🍑', '🥝'],
+            medium: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'],
+            hard: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🏑', '🥊', '🥋', '🎯', '⛳', '🏹', '🎣']
+        };
+
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let score = 0;
+        let startTime;
+        let timerInterval;
+        let bestTime = localStorage.getItem('memoryBestTime') || null;
+        let selectedSymbols = [];
+
+        if (bestTime) {
+            document.getElementById('bestTime').textContent = bestTime + 's';
+        }
+
+        function setDifficulty(level) {
+            difficulty = level;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const grid = document.getElementById('memoryGrid');
+            grid.className = 'memory-grid grid-' + level;
+            
+            initGame();
+        }
+
+        function initGame() {
+            // Reset game state
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            score = 0;
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('matches').textContent = matchedPairs;
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('timer').textContent = '0';
+            document.getElementById('gameOver').classList.remove('show');
+
+            // Clear timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            // Setup cards based on difficulty
+            switch(difficulty) {
+                case 'easy':
+                    selectedSymbols = symbols.easy;
+                    break;
+                case 'medium':
+                    selectedSymbols = symbols.medium;
+                    break;
+                case 'hard':
+                    selectedSymbols = symbols.hard;
+                    break;
+            }
+
+            cards = [...selectedSymbols, ...selectedSymbols].sort(() => Math.random() - 0.5);
+            
+            const grid = document.getElementById('memoryGrid');
+            grid.innerHTML = '';
+
+            cards.forEach((symbol, index) => {
+                const card = document.createElement('div');
+                card.className = 'memory-card';
+                card.dataset.symbol = symbol;
+                card.dataset.index = index;
+                
+                card.addEventListener('click', () => handleCardClick(card, symbol));
+                grid.appendChild(card);
+            });
+
+            // Start timer on first click
+            startTime = null;
+        }
+
+        function handleCardClick(card, symbol) {
+            // Start timer on first click
+            if (!startTime) {
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 100);
+                playBackgroundMusic();
+            }
+
+            if (flippedCards.length < 2 && 
+                !card.classList.contains('flipped') && 
+                !card.classList.contains('matched')) {
+                
+                playFlipSound();
+                card.classList.add('flipped');
+                card.textContent = symbol;
+                flippedCards.push(card);
+
+                if (flippedCards.length === 2) {
+                    moves++;
+                    document.getElementById('moves').textContent = moves;
+
+                    setTimeout(() => {
+                        if (flippedCards[0].dataset.symbol === flippedCards[1].dataset.symbol) {
+                            // Match found
+                            playMatchSound();
+                            flippedCards.forEach(c => c.classList.add('matched'));
+                            matchedPairs++;
+                            
+                            // Calculate score
+                            const timeBonus = Math.max(0, 100 - Math.floor((Date.now() - startTime) / 1000));
+                            const movesPenalty = moves * 2;
+                            score += Math.max(10, 50 - movesPenalty + timeBonus);
+                            
+                            document.getElementById('matches').textContent = matchedPairs;
+                            document.getElementById('score').textContent = score;
+
+                            if (matchedPairs === selectedSymbols.length) {
+                                stopBackgroundMusic();
+                                setTimeout(() => playWinSound(), 300);
+                                endGame();
+                            }
+                        } else {
+                            // No match
+                            playWrongSound();
+                            flippedCards.forEach(c => {
+                                c.classList.remove('flipped');
+                                c.textContent = '';
+                            });
+                        }
+                        flippedCards = [];
+                    }, 1000);
+                }
+            }
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timer').textContent = elapsed;
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            stopBackgroundMusic();
+            const finalTime = Math.floor((Date.now() - startTime) / 1000);
+            
+            // Update best time
+            if (!bestTime || finalTime < parseInt(bestTime)) {
+                bestTime = finalTime;
+                localStorage.setItem('memoryBestTime', bestTime);
+                document.getElementById('bestTime').textContent = bestTime + 's';
+            }
+
+            // Calculate stars based on performance
+            let stars = '⭐';
+            if (moves <= selectedSymbols.length * 1.5) {
+                stars = '⭐⭐⭐';
+            } else if (moves <= selectedSymbols.length * 2) {
+                stars = '⭐⭐';
+            }
+
+            document.getElementById('stars').textContent = stars;
+            document.getElementById('finalTime').textContent = finalTime;
+            document.getElementById('finalMoves').textContent = moves;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function toggleMusic() {
+            const btn = document.getElementById('musicBtn');
+            if (isMusicPlaying) {
+                stopBackgroundMusic();
+                btn.textContent = '🔇 Musiqa';
+            } else {
+                playBackgroundMusic();
+                btn.textContent = '🔊 Musiqa';
+            }
+        }
+
+        // Initialize game on load
+        initGame();
+    </script>
+</body>
+</html>
